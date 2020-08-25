@@ -1,0 +1,210 @@
+import pygame, random
+from time import sleep
+
+WHITE=(255,255,255)
+RED=(255,0,0)
+pad_width=740
+pad_height=370
+background_width=740
+gyosu_width=110
+aircraft_width=90
+aircraft_height=55
+
+gyosu_width=110
+gyosu_height=67
+c1_width=140
+c1_height=60
+c2_width=86
+c2_height=60
+
+def textObj(text,font):
+    textSurface=font.render(text,True,RED)
+    return textSurface,textSurface.get_rect()
+
+def dispMessage(text):
+    global gamepad
+
+    largeText=pygame.font.Font('freesansbold.ttf',115)
+    TextSurf,TextRect=textObj(text,largeText)
+    TextRect.center=((pad_width/2),(pad_height/2))
+    gamepad.blit(TextSurf,TextRect)
+    pygame.display.update()
+    sleep(2)
+    runGame()
+
+def crash():
+    global gamepad
+    dispMessage('RETAKE')
+
+
+def drawObject(obj,x,y):
+    global gamepad
+    gamepad.blit(obj,(x,y))
+
+
+def runGame():
+    global gamepad, clock, aircraft, background1,background2
+    global gyosu,cs,snow,boom
+
+    isShotGyosu=False
+    boom_count=0
+
+    snow_xy=[]
+
+    x=pad_width*0.05
+    y=pad_height*0.8
+    y_change=0
+
+    background1_x=0
+    background2_x=background_width
+
+    gyosu_x=pad_width
+    gyosu_y=random.randrange(0,pad_height)
+
+    c_x=pad_width
+    c_y=random.randrange(0,pad_height)
+    random.shuffle(cs)
+    c=cs[0]
+
+    crashed=False
+    while not crashed:
+        for event in pygame.event.get():
+            if event.type==pygame.QUIT:
+                crashed=True
+            if event.type==pygame.KEYDOWN:
+                if event.key==pygame.K_UP:
+                    y_change=-5
+                elif event.key==pygame.K_DOWN:
+                    y_change=5
+
+                elif event.key==pygame.K_LCTRL:
+                    snow_x=x+aircraft_width
+                    snow_y=y+aircraft_height/2
+                    snow_xy.append([snow_x,snow_y])
+                elif event.key==pygame.K_SPACE:
+                    sleep(5)
+            if event.type==pygame.KEYUP:
+                if event.key==pygame.K_UP or event.key==pygame.K_DOWN:
+                    y_change=0
+        #게임패드 클리어
+        gamepad.fill(WHITE)
+        #배경 그리기
+        background1_x-=2
+        background2_x-=2
+
+        if background1_x==-background_width:
+            background1_x=background_width
+
+        if background2_x==-background_width:
+            background2_x=background_width
+
+        drawObject(background1,background1_x,0)
+        drawObject(background2,background2_x,0)
+        #비행기(눈송)위치
+        y += y_change
+        if y<0:
+            y=0
+        elif y>pad_height-aircraft_height:
+            y=pad_height-aircraft_height
+        #교수 위치
+        gyosu_x-=7
+        if gyosu_x<=0:
+            gyosu_x=pad_width
+            gyosu_y=random.randrange(0,pad_height)
+        #C학점 위치
+        if c[1]==None: #수정됨
+            c_x-=30
+        else:
+            c_x-=15
+
+        if c_x<=0:
+            c_x=pad_width
+            c_y=random.randrange(0,pad_height)
+            random.shuffle(cs)
+            c=cs[0]
+        #눈 위치
+        if len(snow_xy)!=0:
+            for i,sxy in enumerate(snow_xy):
+                sxy[0]+=15
+                snow_xy[i][0]=sxy[0]
+
+                if sxy[0]>=gyosu_x:
+                    if sxy[1]>gyosu_y and sxy[1]<gyosu_y+gyosu_height:
+                        snow_xy.remove(sxy)
+                        isShotGyosu=True
+
+                if sxy[0]>=pad_width:
+                    try:
+                        snow_xy.remove(sxy)
+                    except:
+                        pass
+        if x+aircraft_width>gyosu_x:
+            if(y>gyosu_y and y<gyosu_y+gyosu_height)or\
+                    (y+aircraft_height>gyosu_y and y+aircraft_height<gyosu_y+gyosu_height):
+                crash()
+        drawObject(aircraft, x, y)
+
+        if c[1]!=None:
+            if c[0]==0:
+                c_width=c1_width
+                c_height=c1_height
+            elif c[0]==1:
+                c_width=c2_width
+                c_height=c2_height
+
+            if x+aircraft_width>c_x:
+                if(y>c_y and y<c_y+c_height)or\
+                        (y+aircraft_height>c_y and y+aircraft_height<c_y+c_height):
+                    crash()
+
+
+        if len(snow_xy)!=0:
+            for sx,sy in snow_xy:
+                drawObject(snow,sx,sy)
+
+        if not isShotGyosu:
+            drawObject(gyosu,gyosu_x,gyosu_y)
+        else:
+            drawObject(boom,gyosu_x,gyosu_y)
+            boom_count+=1
+            if boom_count>5:
+                boom_count=0
+                gyosu_x=pad_width
+                gyosu_y=random.randrange(0,pad_height-gyosu_height)
+                isShotGyosu=False
+
+        if c[1]!=None:
+            drawObject(c[1],c_x,c_y)
+
+        pygame.display.update()
+        clock.tick(60)
+
+    pygame.quit()
+    quit()
+def initGame():
+    global gamepad,clock,aircraft,background1,background2
+    global gyosu, cs, snow,boom
+
+    cs=[]
+
+    pygame.init()
+    gamepad=pygame.display.set_mode((pad_width,pad_height))
+    pygame.display.set_caption('PyFlying')
+    aircraft=pygame.image.load('noonsong.png')
+    background1=pygame.image.load('background.png')
+    background2=background1.copy()
+    gyosu = pygame.image.load('gyosu.png')
+    cs.append((0,pygame.image.load('c.png')))
+    cs.append((1,pygame.image.load('c2.png')))
+    boom=pygame.image.load('boom.png')
+
+    for i in range(3):
+        cs.append((i+2,None))
+
+    snow=pygame.image.load('snow.png')
+
+    clock=pygame.time.Clock()
+    runGame()
+
+if __name__=='__main__':
+    initGame()
