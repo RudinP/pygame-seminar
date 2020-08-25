@@ -1,6 +1,7 @@
 #주의!!!! 세미나 설명 시 코드 가독성을 위해 코드의 위치를 바꾸었음을 알려주세요!
 
 import pygame, random
+from time import sleep
 
 WHITE=(255,255,255)
 pad_width=740
